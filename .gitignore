@@ -1,5 +1,7 @@
 # Secrets / local config
 .env
+selfhost.key
+selfhost.crt
 
 # Budget data — never commit
 data/
