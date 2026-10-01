@@ -1,0 +1,15 @@
+# Secrets / local config
+.env
+
+# Budget data — never commit
+data/
+
+# Backup archives and checksums (live on the NAS)
+backups/
+
+# Python
+__pycache__/
+*.pyc
+
+# Docker
+*.pid
