@@ -93,7 +93,7 @@ def seconds_until(hhmm: str) -> float:
 
 def main() -> None:
     backup_at = os.environ.get("BACKUP_AT", "").strip()
-    interval_h = float(os.environ.get("BACKUP_INTERVAL_H", "24"))
+    interval_h = float(os.environ.get("BACKUP_INTERVAL_H") or 24)
 
     if os.environ.get("RUN_ONCE") == "1" or "--once" in sys.argv:
         sys.exit(0 if run_backup() else 1)

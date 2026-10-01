@@ -3,8 +3,9 @@
 
 # Budget data — never commit
 data/
+actual-data/
 
-# Backup archives and checksums (live on the NAS)
+# Backup archives and checksums
 backups/
 
 # Python
