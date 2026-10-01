@@ -2,15 +2,14 @@
 """Actual Budget - backup sidecar.
 
 Creates dated .tar.gz archives of the budget data directory, prunes old
-ones, and loops either on an interval or daily at a fixed time (BACKUP_AT).
+ones, and loops daily at a fixed time (BACKUP_AT).
 
 Environment (set in docker-compose.yml from .env):
   DATA_DIR                budget data to back up (read-only mount, default /data)
   BACKUP_DIR              where archives go (default /backups)
   BACKUP_RETENTION_DAYS   prune archives older than this (default 30)
   BACKUP_PREFIX           archive filename prefix (default actual-backup)
-  BACKUP_INTERVAL_H       run every N hours (default 24), ignored if BACKUP_AT set
-  BACKUP_AT               run daily at "HH:MM" 24h clock (default "" = interval mode)
+  BACKUP_AT               run daily at "HH:MM" 24h clock (default 22:30)
   RUN_ONCE                "1" = run one backup and exit
 """
 import hashlib
@@ -92,25 +91,18 @@ def seconds_until(hhmm: str) -> float:
 
 
 def main() -> None:
-    backup_at = os.environ.get("BACKUP_AT", "").strip()
-    interval_h = float(os.environ.get("BACKUP_INTERVAL_H") or 24)
+    backup_at = os.environ.get("BACKUP_AT", "").strip() or "22:30"
 
     if os.environ.get("RUN_ONCE") == "1" or "--once" in sys.argv:
         sys.exit(0 if run_backup() else 1)
 
-    if backup_at:
-        log(f"Backup daemon starting: daily at {backup_at}, retention {RETENTION_DAYS} days.")
-        run_backup()  # immediate first backup so there's always at least one
-        while True:
-            wait = seconds_until(backup_at)
-            log(f"Next backup in {wait / 3600:.1f}h.")
-            time.sleep(max(wait, 1))
-            run_backup()
-    else:
-        log(f"Backup daemon starting: every {interval_h:g}h, retention {RETENTION_DAYS} days.")
-        while True:
-            run_backup()
-            time.sleep(interval_h * 3600)
+    log(f"Backup daemon starting: daily at {backup_at}, retention {RETENTION_DAYS} days.")
+    run_backup()  # immediate first backup so there's always at least one
+    while True:
+        wait = seconds_until(backup_at)
+        log(f"Next backup in {wait / 3600:.1f}h.")
+        time.sleep(max(wait, 1))
+        run_backup()
 
 
 if __name__ == "__main__":

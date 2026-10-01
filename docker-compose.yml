@@ -45,6 +45,5 @@ services:
     environment:
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
       BACKUP_PREFIX: ${BACKUP_PREFIX:-actual-backup}
-      BACKUP_INTERVAL_H: ${BACKUP_INTERVAL_H:-}
-      BACKUP_AT: ${BACKUP_AT:-}
+      BACKUP_AT: ${BACKUP_AT:-22:30}
       TZ: ${TZ:-UTC}
