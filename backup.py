@@ -17,7 +17,7 @@ import os
 import sys
 import tarfile
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 DATA_DIR = os.environ.get("DATA_DIR", "/data")
 BACKUP_DIR = os.environ.get("BACKUP_DIR", "/backups")
@@ -26,7 +26,7 @@ PREFIX = os.environ.get("BACKUP_PREFIX", "actual-backup")
 
 
 def log(msg: str) -> None:
-    print(f"[{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}] {msg}", flush=True)
+    print(f"[{datetime.now().astimezone().strftime('%Y-%m-%d %H:%M:%S')}] {msg}", flush=True)
 
 
 def run_backup() -> bool:
