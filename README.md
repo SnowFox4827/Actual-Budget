@@ -13,7 +13,9 @@ actually have on hand, so your budget always reflects reality (very similar to Y
 - **Importing** — QIF, OFX, QFX, CAMT.053, CSV, plus YNAB4 / nYNAB importers
 - **Reports** — net worth, cash flow, and a custom report builder
 
-This setup is for **local network use only** (no public internet exposure, no HTTPS proxy).
+This setup is for **local network use** (no public internet exposure), with a self-signed
+HTTPS cert so the app can use `SharedArrayBuffer` (browsers block it over plain HTTP
+except on `localhost`).
 
 ## Files
 
@@ -56,22 +58,48 @@ Available settings:
    Docker Compose ignores dotfiles when copying a project around, so make sure
    `.env` comes along — don't rename it.
 
-2. Start the app and the backup sidecar:
+2. **Generate the self-signed cert** (one-time; the first command includes `mkdir -p`):
+
+   ```bash
+   mkdir -p actual-data && openssl req -x509 -newkey rsa:2048 -sha256 -days 3650 -nodes \
+     -keyout actual-data/selfhost.key -out actual-data/selfhost.crt \
+     -subj "/CN=<your-server-ip>"
+   ```
+
+3. In `docker-compose.yml`, uncomment the two HTTPS lines under `actual_server`'s
+   `environment:` (and the `NODE_EXTRA_CA_CERTS` healthcheck line, so the container
+   reports healthy):
+
+   ```yaml
+       environment:
+         - ACTUAL_HTTPS_KEY=/data/selfhost.key
+         - ACTUAL_HTTPS_CERT=/data/selfhost.crt
+       healthcheck:
+         test: ['CMD-SHELL', 'NODE_EXTRA_CA_CERTS=/data/selfhost.crt node scripts/health-check.js']
+   ```
+
+4. Start the app and the backup sidecar:
 
    ```bash
    docker compose up -d
    ```
 
-3. Open **http://<your-server-ip>:<APP_PORT>** from any device on your network
-   (e.g. `http://192.168.1.10:5006`) and create your budget.
+5. Open **https://<your-server-ip>:<APP_PORT>** from any device on your network
+   (e.g. `https://192.168.1.10:5006`). The browser shows a certificate warning
+   because the cert is self-signed — click through it (accept the risk) and
+   create your budget.
 
-4. Changing the port: edit `APP_PORT` in `.env`, then restart:
+   Without HTTPS, opening `http://...` fails with
+   "Actual requires access to SharedArrayBuffer" — that's the browser blocking
+   `SharedArrayBuffer` on plain HTTP, not an app bug.
+
+6. Changing the port: edit `APP_PORT` in `.env`, then restart:
 
    ```bash
    docker compose up -d
    ```
 
-   The app is then at `http://<your-server-ip>:<APP_PORT>`.
+   The app is then at `https://<your-server-ip>:<APP_PORT>`.
 
 ## Keeping it running
 
@@ -133,10 +161,15 @@ Set `TZ` in `.env` (e.g. `TZ=America/Chicago`) so 22:30 means your local 10:30 p
 ## Troubleshooting
 
 - Status/logs: `docker compose ps`, `docker compose logs -f actual_server backup`
-- Health check: `curl http://localhost:$APP_PORT/health` should return a 200
+- Health check: `curl -k https://localhost:$APP_PORT/health` should return a 200
+  (`-k` skips the self-signed cert check)
+- Container shows `unhealthy` after enabling HTTPS? Uncomment the
+  `NODE_EXTRA_CA_CERTS` healthcheck line in `docker-compose.yml`
 - Port busy? Change `APP_PORT` in `.env`, then `docker compose up -d`
 
 ## Firewall note
 
 Only devices on your local network can reach it as long as your router does not
-port-forward `APP_PORT` (default 5006) to the internet. Don't set up forwarding unless you also add HTTPS.
+port-forward `APP_PORT` (default 5006) to the internet. Don't set up forwarding
+unless you also replace the self-signed cert with a real one (e.g. behind a
+reverse proxy).
