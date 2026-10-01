@@ -36,8 +36,7 @@ Available settings:
 | `BACKUP_DIR` | `./backups` | Where backup archives are written |
 | `BACKUP_RETENTION_DAYS` | `30` | Delete archives older than this |
 | `BACKUP_PREFIX` | `actual-backup` | Filename prefix for archives |
-| `BACKUP_INTERVAL_H` | `24` | How often the sidecar backs up, in hours |
-| `BACKUP_AT` | *(empty)* | Daily backup time, `HH:MM` 24h clock (e.g. `22:30`). When set, `BACKUP_INTERVAL_H` is ignored |
+| `BACKUP_AT` | `22:30` | Daily backup time, `HH:MM` 24h clock |
 | `TZ` | `UTC` | Container timezone — makes `BACKUP_AT` mean your local time (e.g. `America/Chicago` for 10:30 pm) |
 
 ## Requirements
@@ -98,8 +97,7 @@ The backup runs as a sidecar container (`actual-backup`) built from
 - mounts `./actual-data` **read-only** — it can never damage the live budget
 - writes dated archives to `BACKUP_DIR` (default `./backups`), each with a
   matching `.sha256` checksum file
-- runs immediately at start, then either every `BACKUP_INTERVAL_H` hours (default 24),
-  or daily at `BACKUP_AT` (e.g. `"22:30"` = 10:30 pm) if that's set in `.env`
+- runs immediately at start, then daily at `BACKUP_AT` (default `"22:30"` = 10:30 pm)
 - can write to a NAS mount: set `BACKUP_DIR` to the host mount path, e.g.
   `/srv/dev-disk-by-uuid-XXXX-XXXX/Backups/ActualBudget`. Make sure the share is
   mounted before `docker compose up`, otherwise archives silently land in an
