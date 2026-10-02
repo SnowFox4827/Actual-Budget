@@ -58,13 +58,26 @@ Available settings:
    Docker Compose ignores dotfiles when copying a project around, so make sure
    `.env` comes along — don't rename it.
 
-2. **Generate the self-signed cert** (one-time; the first command includes `mkdir -p`):
+2. **Generate the self-signed cert** (one-time; the first command includes `mkdir -p`).
+   The SAN (`subjectAltName`) matters — modern browsers check it, not the CN, and the
+   cert only works once it's trusted *and* matches the name/IP you browse by:
 
    ```bash
    mkdir -p actual-data && openssl req -x509 -newkey rsa:2048 -sha256 -days 3650 -nodes \
      -keyout actual-data/selfhost.key -out actual-data/selfhost.crt \
-     -subj "/CN=<your-server-ip>"
+     -subj "/CN=<your-server-ip>" \
+     -addext "subjectAltName=IP:<your-server-ip>"
    ```
+
+   If you reach the server by hostname (e.g. via a DNS/hosts entry like
+   `actual.local → 192.168.1.10`), include it too:
+
+   ```bash
+   ... -addext "subjectAltName=IP:192.168.1.10,DNS:actual.local"
+   ```
+
+   The cert is valid for 10 years; regenerate with the same command if the
+   server's IP ever changes.
 
 3. In `docker-compose.yml`, uncomment the two HTTPS lines under `actual_server`'s
    `environment:` (and the `NODE_EXTRA_CA_CERTS` healthcheck line, so the container
@@ -166,6 +179,48 @@ Set `TZ` in `.env` (e.g. `TZ=America/Chicago`) so 22:30 means your local 10:30 p
 - Container shows `unhealthy` after enabling HTTPS? Uncomment the
   `NODE_EXTRA_CA_CERTS` healthcheck line in `docker-compose.yml`
 - Port busy? Change `APP_PORT` in `.env`, then `docker compose up -d`
+
+## Changing the DNS name later
+
+If you later add a hostname for the server (a DNS entry on your router or a hosts
+entry on each device, e.g. `actual.local → 192.168.0.148`), the cert must list
+that name in its SAN or the browser warns again:
+
+1. Regenerate the cert with the name included (keep the IP so both keep working):
+
+   ```bash
+   openssl req -x509 -newkey rsa:2048 -sha256 -days 3650 -nodes \
+     -keyout actual-data/selfhost.key -out actual-data/selfhost.crt \
+     -subj "/CN=actual.local" \
+     -addext "subjectAltName=IP:192.168.0.148,DNS:actual.local"
+   ```
+
+2. Restart: `docker compose up -d`
+3. **Re-trust the new cert** on each device. A freshly generated cert is a brand-new
+   CA — devices that trusted the old file do not automatically trust the new one,
+   so repeat the per-device install from the next section.
+
+If the hostname itself changes (e.g. from `actual.local` to `budget.local`), it's
+the same procedure: regenerate with the new `DNS:` entry, restart, re-trust.
+
+## Trusting the certificate on your devices
+
+Each device needs the cert installed once as a trusted CA; after that, no more
+warnings. Copy `selfhost.crt` from the server to each device first.
+
+- **Windows:** double-click the `.crt` → Install Certificate → Local Machine →
+  "Place all certificates in the following store" → Trusted Root Certification
+  Authorities
+- **macOS:** double-click, add to the System keychain, then in Keychain Access set
+  Trust → "When using this certificate" → Always Trust
+- **Linux (Debian/Ubuntu):** `sudo cp selfhost.crt /usr/local/share/ca-certificates/actual.crt && sudo update-ca-certificates`
+- **Android:** Settings → Security → Encryption & credentials → Install a
+  certificate → CA certificate
+- **iOS:** open the `.crt`, install the profile, then enable it under Settings →
+  General → About → Certificate Trust Settings
+- **Firefox (all OSes):** uses its own store — Settings → Privacy & Security →
+  Certificates → View Certificates → Authorities → Import → check "Trust this CA
+  to identify websites"
 
 ## Firewall note
 
