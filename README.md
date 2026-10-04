@@ -58,22 +58,23 @@ Available settings:
    Docker Compose ignores dotfiles when copying a project around, so make sure
    `.env` comes along — don't rename it.
 
-2. **Generate the self-signed cert** (one-time; the first command includes `mkdir -p`).
+2. **Generate the self-signed cert** (one-time; the command includes `mkdir -p`).
    The SAN (`subjectAltName`) matters — modern browsers check it, not the CN, and the
-   cert only works once it's trusted *and* matches the name/IP you browse by:
+   cert only works once it's trusted *and* matches the name/IP you browse by. Replace
+   `<your-server-ip>` with your server's IP (it appears three times):
 
    ```bash
    mkdir -p actual-data && openssl req -x509 -newkey rsa:2048 -sha256 -days 3650 -nodes \
-     -keyout actual-data/selfhost.key -out actual-data/selfhost.crt \
+     -keyout ./actual-data/selfhost.key -out ./actual-data/selfhost.crt \
      -subj "/CN=<your-server-ip>" \
-     -addext "subjectAltName=IP:<your-server-ip>"
+     -addext "subjectAltName=DNS:localhost,IP:<your-server-ip>,IP:127.0.0.1"
    ```
 
    If you reach the server by hostname (e.g. via a DNS/hosts entry like
-   `actual.local → 192.168.1.10`), include it too:
+   `actual.local → 192.168.1.10`), include it in the SAN too:
 
    ```bash
-   ... -addext "subjectAltName=IP:192.168.1.10,DNS:actual.local"
+   ... -addext "subjectAltName=DNS:localhost,DNS:actual.local,IP:<your-server-ip>,IP:127.0.0.1"
    ```
 
    The cert is valid for 10 years; regenerate with the same command if the
@@ -190,9 +191,9 @@ that name in its SAN or the browser warns again:
 
    ```bash
    openssl req -x509 -newkey rsa:2048 -sha256 -days 3650 -nodes \
-     -keyout actual-data/selfhost.key -out actual-data/selfhost.crt \
+     -keyout ./actual-data/selfhost.key -out ./actual-data/selfhost.crt \
      -subj "/CN=actual.local" \
-     -addext "subjectAltName=IP:192.168.0.148,DNS:actual.local"
+     -addext "subjectAltName=DNS:localhost,DNS:actual.local,IP:<your-server-ip>,IP:127.0.0.1"
    ```
 
 2. Restart: `docker compose up -d`
